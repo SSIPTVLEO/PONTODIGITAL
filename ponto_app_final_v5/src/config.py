@@ -14,7 +14,7 @@ class Config:
     MAIL_USE_TLS = False # Porta 465 usa SSL, não TLS
     MAIL_USE_SSL = True # Força SSL para porta 465
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME") or "_mainaccount@bellaotica.com"
-    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD") or "SUA_SENHA_DO_CPANEL_AQUI" # Substitua pela sua senha real
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD") or "Aan@62041700" # Substitua pela sua senha real
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER") or "_mainaccount@bellaotica.com"
 
     # Salt para itsdangerous
