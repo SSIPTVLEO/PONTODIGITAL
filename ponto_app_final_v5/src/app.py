@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, render_template, url_for, current_app, make_response, session
+from flask import Flask, request, jsonify, render_template, url_for, current_app, make_response, session, redirect
 from datetime import datetime, date
 from passlib.hash import bcrypt
 from models import db
