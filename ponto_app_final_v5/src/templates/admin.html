@@ -1,0 +1,617 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Ponto App{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <h1><i class="fas fa-user-shield"></i> Painel Administrativo</h1>
+        <div class="current-time" id="currentTime"></div>
+    </div>
+
+    <!-- Estatísticas Gerais -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-content">
+                <h3 id="totalUsuarios">0</h3>
+                <p>Total de Usuários</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+                <h3 id="registrosHoje">0</h3>
+                <p>Registros Hoje</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-content">
+                <h3 id="horasTotal">0h</h3>
+                <p>Horas Trabalhadas</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <div class="stat-content">
+                <h3 id="usuariosAtivos">0</h3>
+                <p>Usuários Ativos</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros e Controles -->
+    <div class="admin-controls">
+        <div class="control-section">
+            <h3><i class="fas fa-filter"></i> Filtros</h3>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="dataInicio">Data Início:</label>
+                    <input type="date" id="dataInicio" class="form-control">
+                </div>
+                <div class="filter-group">
+                    <label for="dataFim">Data Fim:</label>
+                    <input type="date" id="dataFim" class="form-control">
+                </div>
+                <div class="filter-group">
+                    <label for="usuarioFiltro">Usuário:</label>
+                    <select id="usuarioFiltro" class="form-control">
+                        <option value="">Todos os usuários</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-primary" onclick="aplicarFiltros()">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <button class="btn btn-secondary" onclick="limparFiltros()">
+                        <i class="fas fa-times"></i> Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Usuários -->
+    <div class="users-section">
+        <div class="section-header">
+            <h3><i class="fas fa-users"></i> Usuários do Sistema</h3>
+            <button class="btn btn-success" onclick="atualizarListaUsuarios()">
+                <i class="fas fa-sync-alt"></i> Atualizar
+            </button>
+        </div>
+        
+        <div class="users-table-container">
+            <table class="users-table" id="usersTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Admin</th>
+                        <th>Total Registros</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr>
+                        <td colspan="6" class="loading">Carregando usuários...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Relatórios -->
+    <div class="reports-section">
+        <div class="section-header">
+            <h3><i class="fas fa-chart-bar"></i> Relatórios Administrativos</h3>
+        </div>
+        
+        <div class="reports-grid">
+            <div class="report-card">
+                <div class="report-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="report-content">
+                    <h4>Relatório Geral</h4>
+                    <p>Relatório consolidado de todos os usuários</p>
+                    <div class="report-actions">
+                        <button class="btn btn-outline" onclick="gerarRelatorioGeral('html')">
+                            <i class="fas fa-eye"></i> Visualizar
+                        </button>
+                        <button class="btn btn-outline" onclick="gerarRelatorioGeral('csv')">
+                            <i class="fas fa-file-csv"></i> CSV
+                        </button>
+                        <button class="btn btn-outline" onclick="gerarRelatorioGeral('pdf')">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="report-card">
+                <div class="report-icon">
+                    <i class="fas fa-user-clock"></i>
+                </div>
+                <div class="report-content">
+                    <h4>Relatório por Usuário</h4>
+                    <p>Relatório detalhado de usuário específico</p>
+                    <div class="report-actions">
+                        <select id="usuarioRelatorio" class="form-control">
+                            <option value="">Selecione um usuário</option>
+                        </select>
+                        <button class="btn btn-outline" onclick="gerarRelatorioUsuario('html')">
+                            <i class="fas fa-eye"></i> Visualizar
+                        </button>
+                        <button class="btn btn-outline" onclick="gerarRelatorioUsuario('csv')">
+                            <i class="fas fa-file-csv"></i> CSV
+                        </button>
+                        <button class="btn btn-outline" onclick="gerarRelatorioUsuario('pdf')">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Visualizar Registros do Usuário -->
+    <div id="userRecordsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalUserName">Registros do Usuário</h3>
+                <span class="close" onclick="fecharModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="records-table-container">
+                    <table class="records-table" id="recordsTable">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Entrada</th>
+                                <th>Saída Almoço</th>
+                                <th>Retorno Almoço</th>
+                                <th>Saída Final</th>
+                                <th>Banco de Horas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Visualizar Relatório -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3 id="reportModalTitle">Relatório</h3>
+                <span class="close" onclick="fecharModalRelatorio()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="reportContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variáveis globais
+let usuarios = [];
+let currentUserId = null;
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', function() {
+    atualizarHorario();
+    setInterval(atualizarHorario, 1000);
+    carregarUsuarios();
+    configurarFiltrosData();
+});
+
+// Atualizar horário
+function atualizarHorario() {
+    const agora = new Date();
+    const opcoes = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    };
+    document.getElementById('currentTime').textContent = agora.toLocaleDateString('pt-BR', opcoes);
+}
+
+// Configurar filtros de data
+function configurarFiltrosData() {
+    const hoje = new Date();
+    const primeiroDiaDoMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    
+    document.getElementById('dataInicio').value = primeiroDiaDoMes.toISOString().split('T')[0];
+    document.getElementById('dataFim').value = hoje.toISOString().split('T')[0];
+}
+
+// Carregar usuários
+async function carregarUsuarios() {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/admin/usuarios', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            usuarios = data.usuarios;
+            exibirUsuarios(usuarios);
+            atualizarEstatisticas();
+            preencherSelectUsuarios();
+        } else {
+            mostrarErro('Erro ao carregar usuários');
+        }
+    } catch (error) {
+        mostrarErro('Erro de conexão: ' + error.message);
+    }
+}
+
+// Exibir usuários na tabela
+function exibirUsuarios(usuariosList) {
+    const tbody = document.getElementById('usersTableBody');
+    
+    if (usuariosList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-data">Nenhum usuário encontrado</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = usuariosList.map(usuario => `
+        <tr>
+            <td>${usuario.id}</td>
+            <td>${usuario.nome}</td>
+            <td>${usuario.email}</td>
+            <td>
+                <span class="badge ${usuario.is_admin ? 'badge-success' : 'badge-secondary'}">
+                    ${usuario.is_admin ? 'Sim' : 'Não'}
+                </span>
+            </td>
+            <td>${usuario.total_registros}</td>
+            <td class="actions">
+                <button class="btn btn-sm btn-primary" onclick="visualizarRegistros(${usuario.id}, '${usuario.nome}')">
+                    <i class="fas fa-eye"></i> Ver Registros
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Atualizar estatísticas
+function atualizarEstatisticas() {
+    document.getElementById('totalUsuarios').textContent = usuarios.length;
+    
+    const totalRegistros = usuarios.reduce((sum, user) => sum + user.total_registros, 0);
+    document.getElementById('registrosHoje').textContent = totalRegistros;
+    
+    const usuariosAtivos = usuarios.filter(user => user.total_registros > 0).length;
+    document.getElementById('usuariosAtivos').textContent = usuariosAtivos;
+}
+
+// Preencher selects de usuários
+function preencherSelectUsuarios() {
+    const selects = ['usuarioFiltro', 'usuarioRelatorio'];
+    
+    selects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '<option value="">Selecione um usuário</option>';
+        
+        usuarios.forEach(usuario => {
+            const option = document.createElement('option');
+            option.value = usuario.id;
+            option.textContent = `${usuario.nome} (${usuario.email})`;
+            select.appendChild(option);
+        });
+    });
+}
+
+// Visualizar registros de um usuário
+async function visualizarRegistros(userId, userName) {
+    currentUserId = userId;
+    document.getElementById('modalUserName').textContent = `Registros de ${userName}`;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+        
+        let url = `/admin/usuario/${userId}/registros`;
+        const params = new URLSearchParams();
+        if (dataInicio) params.append('data_inicio', dataInicio);
+        if (dataFim) params.append('data_fim', dataFim);
+        if (params.toString()) url += '?' + params.toString();
+        
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            exibirRegistrosModal(data.registros);
+            document.getElementById('userRecordsModal').style.display = 'block';
+        } else {
+            mostrarErro('Erro ao carregar registros do usuário');
+        }
+    } catch (error) {
+        mostrarErro('Erro de conexão: ' + error.message);
+    }
+}
+
+// Exibir registros no modal
+function exibirRegistrosModal(registros) {
+    const tbody = document.getElementById('recordsTableBody');
+    
+    if (registros.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-data">Nenhum registro encontrado</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = registros.map(registro => `
+        <tr>
+            <td>${new Date(registro.data).toLocaleDateString('pt-BR')}</td>
+            <td>${registro.entrada || '--:--'}</td>
+            <td>${registro.saida_almoco || '--:--'}</td>
+            <td>${registro.retorno_almoco || '--:--'}</td>
+            <td>${registro.saida_final || '--:--'}</td>
+            <td>${registro.banco_horas ? registro.banco_horas.toFixed(2) + 'h' : '0.00h'}</td>
+        </tr>
+    `).join('');
+}
+
+// Gerar relatório geral
+async function gerarRelatorioGeral(formato) {
+    try {
+        const token = localStorage.getItem('token');
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+        
+        let url = `/admin/relatorio-geral?formato=${formato}`;
+        if (dataInicio) url += `&data_inicio=${dataInicio}`;
+        if (dataFim) url += `&data_fim=${dataFim}`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            if (formato === 'html') {
+                const data = await response.json();
+                exibirRelatorioModal('Relatório Geral', data);
+            } else {
+                // Download do arquivo
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `relatorio_geral.${formato}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(downloadUrl);
+            }
+        } else {
+            mostrarErro('Erro ao gerar relatório geral');
+        }
+    } catch (error) {
+        mostrarErro('Erro de conexão: ' + error.message);
+    }
+}
+
+// Gerar relatório de usuário
+async function gerarRelatorioUsuario(formato) {
+    const userId = document.getElementById('usuarioRelatorio').value;
+    if (!userId) {
+        mostrarErro('Selecione um usuário para gerar o relatório');
+        return;
+    }
+    
+    try {
+        const token = localStorage.getItem('token');
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+        
+        let url = `/admin/relatorio/${userId}?formato=${formato}`;
+        if (dataInicio) url += `&data_inicio=${dataInicio}`;
+        if (dataFim) url += `&data_fim=${dataFim}`;
+        
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            if (formato === 'html') {
+                const data = await response.json();
+                exibirRelatorioModal(`Relatório - ${data.usuario.nome}`, data);
+            } else {
+                // Download do arquivo
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `relatorio_${data.usuario.nome.replace(' ', '_')}.${formato}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(downloadUrl);
+            }
+        } else {
+            mostrarErro('Erro ao gerar relatório do usuário');
+        }
+    } catch (error) {
+        mostrarErro('Erro de conexão: ' + error.message);
+    }
+}
+
+// Exibir relatório no modal
+function exibirRelatorioModal(titulo, dados) {
+    document.getElementById('reportModalTitle').textContent = titulo;
+    
+    let html = '';
+    
+    if (dados.usuarios) {
+        // Relatório geral
+        html = `
+            <div class="report-summary">
+                <h4>Resumo do Período</h4>
+                <p><strong>Período:</strong> ${dados.periodo.inicio} a ${dados.periodo.fim}</p>
+                <p><strong>Total de usuários:</strong> ${dados.usuarios.length}</p>
+            </div>
+            
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Dias Trabalhados</th>
+                        <th>Total de Horas</th>
+                        <th>Média Diária</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${dados.usuarios.map(usuario => `
+                        <tr>
+                            <td>${usuario.nome}</td>
+                            <td>${usuario.email}</td>
+                            <td>${usuario.total_dias}</td>
+                            <td>${usuario.total_horas.toFixed(2)}h</td>
+                            <td>${usuario.media_diaria.toFixed(2)}h</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } else {
+        // Relatório individual
+        html = `
+            <div class="report-summary">
+                <h4>Informações do Usuário</h4>
+                <p><strong>Nome:</strong> ${dados.usuario.nome}</p>
+                <p><strong>Email:</strong> ${dados.usuario.email}</p>
+                <p><strong>Período:</strong> ${dados.periodo.inicio} a ${dados.periodo.fim}</p>
+            </div>
+            
+            <div class="report-stats">
+                <h4>Estatísticas</h4>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <span class="stat-label">Dias Trabalhados:</span>
+                        <span class="stat-value">${dados.estatisticas.total_dias}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total de Horas:</span>
+                        <span class="stat-value">${dados.estatisticas.total_horas.toFixed(2)}h</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Média Diária:</span>
+                        <span class="stat-value">${dados.estatisticas.media_diaria.toFixed(2)}h</span>
+                    </div>
+                </div>
+            </div>
+            
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Entrada</th>
+                        <th>Saída Almoço</th>
+                        <th>Retorno Almoço</th>
+                        <th>Saída Final</th>
+                        <th>Banco de Horas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${dados.registros.map(registro => `
+                        <tr>
+                            <td>${registro.data}</td>
+                            <td>${registro.entrada}</td>
+                            <td>${registro.saida_almoco}</td>
+                            <td>${registro.retorno_almoco}</td>
+                            <td>${registro.saida_final}</td>
+                            <td>${registro.banco_horas}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+    
+    document.getElementById('reportContent').innerHTML = html;
+    document.getElementById('reportModal').style.display = 'block';
+}
+
+// Aplicar filtros
+function aplicarFiltros() {
+    const usuarioId = document.getElementById('usuarioFiltro').value;
+    
+    if (usuarioId) {
+        const usuariosFiltrados = usuarios.filter(user => user.id == usuarioId);
+        exibirUsuarios(usuariosFiltrados);
+    } else {
+        exibirUsuarios(usuarios);
+    }
+}
+
+// Limpar filtros
+function limparFiltros() {
+    document.getElementById('usuarioFiltro').value = '';
+    configurarFiltrosData();
+    exibirUsuarios(usuarios);
+}
+
+// Atualizar lista de usuários
+function atualizarListaUsuarios() {
+    carregarUsuarios();
+}
+
+// Fechar modais
+function fecharModal() {
+    document.getElementById('userRecordsModal').style.display = 'none';
+}
+
+function fecharModalRelatorio() {
+    document.getElementById('reportModal').style.display = 'none';
+}
+
+// Mostrar erro
+function mostrarErro(mensagem) {
+    alert('Erro: ' + mensagem);
+}
+
+// Fechar modal ao clicar fora
+window.onclick = function(event) {
+    const modals = ['userRecordsModal', 'reportModal'];
+    modals.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}
+

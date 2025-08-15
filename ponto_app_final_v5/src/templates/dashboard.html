@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Ponto App{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+  <!-- Card de Registro de Ponto -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-clock"></i> Registro de Ponto</h3>
+      <p>Distância máxima permitida: <strong>{{ max_dist }} metros</strong></p>
+    </div>
+    <div class="card-body">
+      <div class="time-buttons">
+        <button class="btn btn-primary" onclick="registrar('entrada')">
+          <i class="fas fa-sign-in-alt"></i> Entrada
+        </button>
+        <button class="btn btn-warning" onclick="registrar('saida_almoco')">
+          <i class="fas fa-utensils"></i> Saída Almoço
+        </button>
+        <button class="btn btn-success" onclick="registrar('retorno_almoco')">
+          <i class="fas fa-arrow-left"></i> Retorno Almoço
+        </button>
+        <button class="btn btn-danger" onclick="registrar('saida_final')">
+          <i class="fas fa-sign-out-alt"></i> Saída Final
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card de Status Hoje -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-calendar-day"></i> Status de Hoje</h3>
+    </div>
+    <div class="card-body">
+      <div id="status-hoje" class="status-grid">
+        <div class="status-item">
+          <span class="status-label">Entrada:</span>
+          <span id="entrada-status" class="status-value">--:--</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Saída Almoço:</span>
+          <span id="saida-almoco-status" class="status-value">--:--</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Retorno Almoço:</span>
+          <span id="retorno-almoco-status" class="status-value">--:--</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Saída Final:</span>
+          <span id="saida-final-status" class="status-value">--:--</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Banco de Horas:</span>
+          <span id="banco-horas-status" class="status-value">--</span>
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="carregarStatusHoje()">
+        <i class="fas fa-refresh"></i> Atualizar Status
+      </button>
+    </div>
+  </div>
+
+  <!-- Card de Resumo Semanal -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-chart-line"></i> Resumo Semanal</h3>
+    </div>
+    <div class="card-body">
+      <div id="resumo-semanal">
+        <p>Carregando resumo...</p>
+      </div>
+      <button class="btn btn-secondary" onclick="carregarResumoSemanal()">
+        <i class="fas fa-refresh"></i> Atualizar Resumo
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+async function registrar(tipo) {
+    const token = getToken();
+    if (!token) {
+        showStatus('Você precisa fazer login primeiro.', 'error');
+        return;
+    }
+
+    if (!navigator.geolocation) {
+        showStatus('Seu navegador não suporta geolocalização.', 'error');
+        return;
+    }
+
+    showStatus('Obtendo localização...', 'info');
+    
+    navigator.geolocation.getCurrentPosition(async function(pos) {
+        const data = { 
+            tipo: tipo, 
+            lat: pos.coords.latitude, 
+            lng: pos.coords.longitude 
+        };
+        
+        try {
+            const resp = await fetch('/registrar-ponto', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const json = await resp.json();
+            
+            if (resp.ok) {
+                showStatus(`${json.sucesso} (distância: ${json.distancia_m || 0} m)`, 'success');
+                carregarStatusHoje();
+            } else {
+                showStatus(json.erro, 'error');
+            }
+        } catch (e) {
+            showStatus('Erro ao contatar o servidor.', 'error');
+        }
+    }, function(err) {
+        showStatus('Não conseguimos obter sua localização.', 'error');
+    }, {enableHighAccuracy: true, timeout: 10000});
+}
+
+async function carregarStatusHoje() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+        const resp = await fetch('/relatorio', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const registros = await resp.json();
+        
+        if (registros.length > 0) {
+            const hoje = registros[0];
+            document.getElementById('entrada-status').textContent = hoje.entrada ? hoje.entrada.substring(0, 5) : '--:--';
+            document.getElementById('saida-almoco-status').textContent = hoje.saida_almoco ? hoje.saida_almoco.substring(0, 5) : '--:--';
+            document.getElementById('retorno-almoco-status').textContent = hoje.retorno_almoco ? hoje.retorno_almoco.substring(0, 5) : '--:--';
+            document.getElementById('saida-final-status').textContent = hoje.saida_final ? hoje.saida_final.substring(0, 5) : '--:--';
+            document.getElementById('banco-horas-status').textContent = hoje.banco_horas ? `${hoje.banco_horas}h` : '--';
+        }
+    } catch (e) {
+        showStatus('Erro ao carregar status de hoje.', 'error');
+    }
+}
+
+async function carregarResumoSemanal() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+        const resp = await fetch('/relatorio', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const registros = await resp.json();
+        
+        const ultimosSete = registros.slice(0, 7);
+        let totalHoras = 0;
+        let diasTrabalhados = 0;
+        
+        ultimosSete.forEach(registro => {
+            if (registro.banco_horas !== null) {
+                totalHoras += registro.banco_horas;
+                diasTrabalhados++;
+            }
+        });
+        
+        const resumoEl = document.getElementById('resumo-semanal');
+        resumoEl.innerHTML = `
+            <div class="resumo-item">
+                <strong>Dias trabalhados:</strong> ${diasTrabalhados}
+            </div>
+            <div class="resumo-item">
+                <strong>Total banco de horas:</strong> ${totalHoras.toFixed(2)}h
+            </div>
+            <div class="resumo-item">
+                <strong>Média diária:</strong> ${diasTrabalhados > 0 ? (totalHoras / diasTrabalhados).toFixed(2) : 0}h
+            </div>
+        `;
+    } catch (e) {
+        showStatus('Erro ao carregar resumo semanal.', 'error');
+    }
+}
+
+// Carregar dados iniciais
+document.addEventListener('DOMContentLoaded', function() {
+    carregarStatusHoje();
+    carregarResumoSemanal();
+});
+{% endblock %}
+

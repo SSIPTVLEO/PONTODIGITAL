@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Login</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="/static/css/styles.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <input type="email" id="email" placeholder="Email" required>
+      <input type="password" id="senha" placeholder="Senha" required>
+      <button type="submit">Entrar</button>
+    </form>
+    <p>Não tem conta? <a href="/cadastro">Cadastre-se</a></p>
+    <div id="message" style="display: none; margin-top: 15px; padding: 10px; border-radius: 5px;"></div>
+  </div>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('email').value;
+  const senha = document.getElementById('senha').value;
+  
+  const messageDiv = document.getElementById('message');
+  
+  const resp = await fetch('/login', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({email, senha})
+  });
+  const j = await resp.json();
+  
+  if (resp.ok && j.token){
+    localStorage.setItem('token', j.token);
+    localStorage.setItem('user_id', j.user_id);
+    localStorage.setItem('nome', j.nome);
+    localStorage.setItem('is_admin', j.is_admin);
+    alert('Login efetuado!');
+    window.location.href = '/';
+  } else {
+    messageDiv.style.display = 'block';
+    messageDiv.style.backgroundColor = '#f8d7da';
+    messageDiv.style.color = '#721c24';
+    messageDiv.style.border = '1px solid #f5c6cb';
+    messageDiv.textContent = j.erro || 'Erro no login';
+  }
+});
+</script>
+</body>
+</html>

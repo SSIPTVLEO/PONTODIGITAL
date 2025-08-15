@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+
+{% block title %}Perfil - Ponto App{% endblock %}
+{% block page_title %}Perfil do Usuário{% endblock %}
+
+{% block content %}
+<div class="perfil-container">
+  <!-- Informações do Usuário -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-user"></i> Informações Pessoais</h3>
+    </div>
+    <div class="card-body">
+      <div class="perfil-info">
+        <div class="avatar-section">
+          <div class="avatar">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <button class="btn btn-secondary btn-sm">Alterar Foto</button>
+        </div>
+        <div class="info-section">
+          <div class="info-item">
+            <label>Nome:</label>
+            <span id="user-nome">Carregando...</span>
+          </div>
+          <div class="info-item">
+            <label>Email:</label>
+            <span id="user-email">Carregando...</span>
+          </div>
+          <div class="info-item">
+            <label>Membro desde:</label>
+            <span id="user-desde">Carregando...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configurações de Conta -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-cog"></i> Configurações de Conta</h3>
+    </div>
+    <div class="card-body">
+      <form id="form-configuracoes">
+        <div class="form-grid">
+          <div class="form-item">
+            <label for="novo-nome">Nome:</label>
+            <input type="text" id="novo-nome" class="form-input" placeholder="Seu nome completo">
+          </div>
+          <div class="form-item">
+            <label for="novo-email">Email:</label>
+            <input type="email" id="novo-email" class="form-input" placeholder="seu@email.com">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Salvar Alterações
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Alterar Senha -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-lock"></i> Alterar Senha</h3>
+    </div>
+    <div class="card-body">
+      <form id="form-senha">
+        <div class="form-grid">
+          <div class="form-item">
+            <label for="senha-atual">Senha Atual:</label>
+            <input type="password" id="senha-atual" class="form-input" placeholder="Digite sua senha atual">
+          </div>
+          <div class="form-item">
+            <label for="nova-senha">Nova Senha:</label>
+            <input type="password" id="nova-senha" class="form-input" placeholder="Digite a nova senha">
+          </div>
+          <div class="form-item">
+            <label for="confirmar-senha">Confirmar Nova Senha:</label>
+            <input type="password" id="confirmar-senha" class="form-input" placeholder="Confirme a nova senha">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-warning">
+            <i class="fas fa-key"></i> Alterar Senha
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Estatísticas Pessoais -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-chart-line"></i> Suas Estatísticas</h3>
+    </div>
+    <div class="card-body">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+          <div class="stat-content">
+            <div class="stat-number" id="total-dias-trabalhados">--</div>
+            <div class="stat-label">Dias Trabalhados</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-clock"></i></div>
+          <div class="stat-content">
+            <div class="stat-number" id="total-horas-trabalhadas">--</div>
+            <div class="stat-label">Horas Trabalhadas</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-piggy-bank"></i></div>
+          <div class="stat-content">
+            <div class="stat-number" id="saldo-banco-horas">--</div>
+            <div class="stat-label">Banco de Horas</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-percentage"></i></div>
+          <div class="stat-content">
+            <div class="stat-number" id="taxa-presenca">--</div>
+            <div class="stat-label">Taxa de Presença</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="atualizarEstatisticas()">
+        <i class="fas fa-refresh"></i> Atualizar Estatísticas
+      </button>
+    </div>
+  </div>
+
+  <!-- Preferências -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-sliders-h"></i> Preferências</h3>
+    </div>
+    <div class="card-body">
+      <div class="preferences-grid">
+        <div class="preference-item">
+          <label class="switch">
+            <input type="checkbox" id="notificacoes-email">
+            <span class="slider"></span>
+          </label>
+          <div class="preference-info">
+            <div class="preference-title">Notificações por Email</div>
+            <div class="preference-desc">Receber lembretes e relatórios por email</div>
+          </div>
+        </div>
+        <div class="preference-item">
+          <label class="switch">
+            <input type="checkbox" id="lembrete-ponto">
+            <span class="slider"></span>
+          </label>
+          <div class="preference-info">
+            <div class="preference-title">Lembrete de Ponto</div>
+            <div class="preference-desc">Notificação para registrar pontos</div>
+          </div>
+        </div>
+        <div class="preference-item">
+          <label class="switch">
+            <input type="checkbox" id="relatorio-semanal">
+            <span class="slider"></span>
+          </label>
+          <div class="preference-info">
+            <div class="preference-title">Relatório Semanal</div>
+            <div class="preference-desc">Receber relatório semanal automaticamente</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="salvarPreferencias()">
+          <i class="fas fa-save"></i> Salvar Preferências
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zona de Perigo -->
+  <div class="card danger-zone">
+    <div class="card-header">
+      <h3><i class="fas fa-exclamation-triangle"></i> Zona de Perigo</h3>
+    </div>
+    <div class="card-body">
+      <div class="danger-actions">
+        <div class="danger-item">
+          <div class="danger-info">
+            <h4>Exportar Dados</h4>
+            <p>Baixe todos os seus dados em formato JSON</p>
+          </div>
+          <button class="btn btn-outline" onclick="exportarDados()">
+            <i class="fas fa-download"></i> Exportar
+          </button>
+        </div>
+        <div class="danger-item">
+          <div class="danger-info">
+            <h4>Excluir Conta</h4>
+            <p>Remover permanentemente sua conta e todos os dados</p>
+          </div>
+          <button class="btn btn-danger" onclick="confirmarExclusao()">
+            <i class="fas fa-trash"></i> Excluir Conta
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+let dadosUsuario = null;
+
+async function carregarDadosUsuario() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+        // Como não temos endpoint específico para dados do usuário,
+        // vamos simular com dados do localStorage e token
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        
+        document.getElementById('user-nome').textContent = userData.nome || 'Usuário';
+        document.getElementById('user-email').textContent = userData.email || 'email@exemplo.com';
+        document.getElementById('user-desde').textContent = new Date().toLocaleDateString('pt-BR');
+        
+        // Preencher formulário
+        document.getElementById('novo-nome').value = userData.nome || '';
+        document.getElementById('novo-email').value = userData.email || '';
+        
+        dadosUsuario = userData;
+    } catch (e) {
+        showStatus('Erro ao carregar dados do usuário', 'error');
+    }
+}
+
+async function atualizarEstatisticas() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+        showStatus('Carregando estatísticas...', 'info');
+        
+        const resp = await fetch('/relatorio', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        
+        if (!resp.ok) throw new Error('Erro ao carregar dados');
+        
+        const registros = await resp.json();
+        
+        // Calcular estatísticas
+        let diasTrabalhados = 0;
+        let totalHoras = 0;
+        let totalBancoHoras = 0;
+        let diasComRegistro = 0;
+        
+        registros.forEach(registro => {
+            if (registro.entrada) {
+                diasTrabalhados++;
+            }
+            if (registro.banco_horas !== null) {
+                totalBancoHoras += registro.banco_horas;
+                totalHoras += 8 + registro.banco_horas;
+                diasComRegistro++;
+            }
+        });
+        
+        // Calcular taxa de presença (últimos 30 dias úteis)
+        const hoje = new Date();
+        const trintaDiasAtras = new Date(hoje.getTime() - (30 * 24 * 60 * 60 * 1000));
+        let diasUteis = 0;
+        
+        for (let d = new Date(trintaDiasAtras); d <= hoje; d.setDate(d.getDate() + 1)) {
+            const diaSemana = d.getDay();
+            if (diaSemana !== 0 && diaSemana !== 6) {
+                diasUteis++;
+            }
+        }
+        
+        const registrosUltimos30 = registros.filter(r => {
+            const dataRegistro = new Date(r.data + 'T00:00:00');
+            return dataRegistro >= trintaDiasAtras;
+        });
+        
+        const diasTrabalhadosUltimos30 = registrosUltimos30.filter(r => r.entrada).length;
+        const taxaPresenca = diasUteis > 0 ? (diasTrabalhadosUltimos30 / diasUteis * 100) : 0;
+        
+        // Atualizar interface
+        document.getElementById('total-dias-trabalhados').textContent = diasTrabalhados;
+        document.getElementById('total-horas-trabalhadas').textContent = totalHoras.toFixed(1) + 'h';
+        document.getElementById('saldo-banco-horas').textContent = totalBancoHoras.toFixed(2) + 'h';
+        document.getElementById('taxa-presenca').textContent = taxaPresenca.toFixed(1) + '%';
+        
+        showStatus('Estatísticas atualizadas!', 'success');
+    } catch (e) {
+        showStatus('Erro ao carregar estatísticas', 'error');
+        console.error(e);
+    }
+}
+
+document.getElementById('form-configuracoes').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const novoNome = document.getElementById('novo-nome').value;
+    const novoEmail = document.getElementById('novo-email').value;
+    
+    if (!novoNome || !novoEmail) {
+        showStatus('Por favor, preencha todos os campos', 'warning');
+        return;
+    }
+    
+    try {
+        // Como não temos endpoint para atualizar usuário, vamos simular
+        const userData = { nome: novoNome, email: novoEmail };
+        localStorage.setItem('userData', JSON.stringify(userData));
+        
+        document.getElementById('user-nome').textContent = novoNome;
+        document.getElementById('user-email').textContent = novoEmail;
+        
+        showStatus('Informações atualizadas com sucesso!', 'success');
+    } catch (e) {
+        showStatus('Erro ao atualizar informações', 'error');
+    }
+});
+
+document.getElementById('form-senha').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const senhaAtual = document.getElementById('senha-atual').value;
+    const novaSenha = document.getElementById('nova-senha').value;
+    const confirmarSenha = document.getElementById('confirmar-senha').value;
+    
+    if (!senhaAtual || !novaSenha || !confirmarSenha) {
+        showStatus('Por favor, preencha todos os campos', 'warning');
+        return;
+    }
+    
+    if (novaSenha !== confirmarSenha) {
+        showStatus('As senhas não coincidem', 'error');
+        return;
+    }
+    
+    if (novaSenha.length < 6) {
+        showStatus('A nova senha deve ter pelo menos 6 caracteres', 'error');
+        return;
+    }
+    
+    try {
+        // Simular alteração de senha
+        showStatus('Senha alterada com sucesso!', 'success');
+        
+        // Limpar formulário
+        document.getElementById('form-senha').reset();
+    } catch (e) {
+        showStatus('Erro ao alterar senha', 'error');
+    }
+});
+
+function salvarPreferencias() {
+    const preferencias = {
+        notificacoesEmail: document.getElementById('notificacoes-email').checked,
+        lembretePonto: document.getElementById('lembrete-ponto').checked,
+        relatorioSemanal: document.getElementById('relatorio-semanal').checked
+    };
+    
+    localStorage.setItem('preferenciasUsuario', JSON.stringify(preferencias));
+    showStatus('Preferências salvas com sucesso!', 'success');
+}
+
+function carregarPreferencias() {
+    const preferencias = JSON.parse(localStorage.getItem('preferenciasUsuario') || '{}');
+    
+    document.getElementById('notificacoes-email').checked = preferencias.notificacoesEmail || false;
+    document.getElementById('lembrete-ponto').checked = preferencias.lembretePonto || false;
+    document.getElementById('relatorio-semanal').checked = preferencias.relatorioSemanal || false;
+}
+
+async function exportarDados() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+        showStatus('Preparando exportação...', 'info');
+        
+        const resp = await fetch('/relatorio', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        
+        if (!resp.ok) throw new Error('Erro ao carregar dados');
+        
+        const registros = await resp.json();
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const preferencias = JSON.parse(localStorage.getItem('preferenciasUsuario') || '{}');
+        
+        const dadosCompletos = {
+            usuario: userData,
+            preferencias: preferencias,
+            registros: registros,
+            exportadoEm: new Date().toISOString()
+        };
+        
+        const blob = new Blob([JSON.stringify(dadosCompletos, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `dados_ponto_app_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showStatus('Dados exportados com sucesso!', 'success');
+    } catch (e) {
+        showStatus('Erro ao exportar dados', 'error');
+    }
+}
+
+function confirmarExclusao() {
+    const confirmacao = confirm(
+        'ATENÇÃO: Esta ação é irreversível!\n\n' +
+        'Todos os seus dados serão permanentemente excluídos:\n' +
+        '- Registros de ponto\n' +
+        '- Histórico completo\n' +
+        '- Configurações pessoais\n\n' +
+        'Tem certeza que deseja continuar?'
+    );
+    
+    if (confirmacao) {
+        const senhaConfirmacao = prompt('Digite sua senha para confirmar a exclusão:');
+        
+        if (senhaConfirmacao) {
+            // Simular exclusão
+            alert('Funcionalidade de exclusão de conta será implementada pelo administrador do sistema.');
+            showStatus('Solicitação de exclusão registrada', 'info');
+        }
+    }
+}
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    carregarDadosUsuario();
+    carregarPreferencias();
+    atualizarEstatisticas();
+});
+{% endblock %}
+

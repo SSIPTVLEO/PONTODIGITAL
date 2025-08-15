@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Confirmação de E-mail - Ponto App</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link href="/static/css/styles.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <h2>Confirmação de E-mail</h2>
+    <div id="message" style="margin-top: 15px; padding: 20px; border-radius: 5px; text-align: center;">
+      <p>Processando confirmação...</p>
+    </div>
+    <div style="text-align: center; margin-top: 20px;">
+      <a href="/login" class="btn">Ir para Login</a>
+    </div>
+  </div>
+
+<script>
+// Extrair token da URL
+const urlParams = new URLSearchParams(window.location.search);
+const token = window.location.pathname.split('/confirm/')[1];
+
+if (token) {
+  // Fazer requisição para confirmar o token
+  fetch(`/confirm/${token}`)
+    .then(response => response.json())
+    .then(data => {
+      const messageDiv = document.getElementById('message');
+      
+      if (data.sucesso) {
+        messageDiv.style.backgroundColor = '#d4edda';
+        messageDiv.style.color = '#155724';
+        messageDiv.style.border = '1px solid #c3e6cb';
+        messageDiv.innerHTML = `
+          <h3>✅ Sucesso!</h3>
+          <p>${data.sucesso}</p>
+        `;
+      } else {
+        messageDiv.style.backgroundColor = '#f8d7da';
+        messageDiv.style.color = '#721c24';
+        messageDiv.style.border = '1px solid #f5c6cb';
+        messageDiv.innerHTML = `
+          <h3>❌ Erro</h3>
+          <p>${data.erro}</p>
+        `;
+      }
+    })
+    .catch(error => {
+      const messageDiv = document.getElementById('message');
+      messageDiv.style.backgroundColor = '#f8d7da';
+      messageDiv.style.color = '#721c24';
+      messageDiv.style.border = '1px solid #f5c6cb';
+      messageDiv.innerHTML = `
+        <h3>❌ Erro</h3>
+        <p>Ocorreu um erro ao processar a confirmação.</p>
+      `;
+    });
+} else {
+  const messageDiv = document.getElementById('message');
+  messageDiv.style.backgroundColor = '#f8d7da';
+  messageDiv.style.color = '#721c24';
+  messageDiv.style.border = '1px solid #f5c6cb';
+  messageDiv.innerHTML = `
+    <h3>❌ Erro</h3>
+    <p>Token de confirmação não encontrado.</p>
+  `;
+}
+</script>
+</body>
+</html>
+

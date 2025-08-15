@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico - Ponto App{% endblock %}
+{% block page_title %}Histórico de Pontos{% endblock %}
+
+{% block content %}
+<div class="historico-container">
+  <!-- Filtros -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-filter"></i> Filtros</h3>
+    </div>
+    <div class="card-body">
+      <div class="filter-grid">
+        <div class="filter-item">
+          <label for="data-inicio">Data Início:</label>
+          <input type="date" id="data-inicio" class="form-input">
+        </div>
+        <div class="filter-item">
+          <label for="data-fim">Data Fim:</label>
+          <input type="date" id="data-fim" class="form-input">
+        </div>
+        <div class="filter-item">
+          <button class="btn btn-primary" onclick="aplicarFiltros()">
+            <i class="fas fa-search"></i> Filtrar
+          </button>
+          <button class="btn btn-secondary" onclick="limparFiltros()">
+            <i class="fas fa-times"></i> Limpar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela de Histórico -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-table"></i> Registros</h3>
+      <div class="card-actions">
+        <button class="btn btn-success" onclick="exportarCSV()">
+          <i class="fas fa-download"></i> Exportar CSV
+        </button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="table-container">
+        <table class="data-table" id="historico-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Entrada</th>
+              <th>Saída Almoço</th>
+              <th>Retorno Almoço</th>
+              <th>Saída Final</th>
+              <th>Banco de Horas</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="historico-tbody">
+            <tr>
+              <td colspan="7" class="loading">Carregando dados...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estatísticas -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-chart-pie"></i> Estatísticas do Período</h3>
+    </div>
+    <div class="card-body">
+      <div id="estatisticas" class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value" id="total-dias">--</div>
+          <div class="stat-label">Dias Trabalhados</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="total-horas">--</div>
+          <div class="stat-label">Total de Horas</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="media-horas">--</div>
+          <div class="stat-label">Média Diária</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="banco-total">--</div>
+          <div class="stat-label">Banco de Horas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+let registrosCompletos = [];
+
+async function carregarHistorico() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+        showStatus('Carregando histórico...', 'info');
+        const resp = await fetch('/relatorio', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        
+        if (!resp.ok) {
+            throw new Error('Erro ao carregar dados');
+        }
+        
+        registrosCompletos = await resp.json();
+        exibirHistorico(registrosCompletos);
+        calcularEstatisticas(registrosCompletos);
+        showStatus('Histórico carregado com sucesso!', 'success');
+    } catch (e) {
+        showStatus('Erro ao carregar histórico.', 'error');
+        console.error(e);
+    }
+}
+
+function exibirHistorico(registros) {
+    const tbody = document.getElementById('historico-tbody');
+    
+    if (registros.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="no-data">Nenhum registro encontrado</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = registros.map(registro => {
+        const status = getStatusDia(registro);
+        return `
+            <tr>
+                <td>${formatarData(registro.data)}</td>
+                <td>${formatarHora(registro.entrada)}</td>
+                <td>${formatarHora(registro.saida_almoco)}</td>
+                <td>${formatarHora(registro.retorno_almoco)}</td>
+                <td>${formatarHora(registro.saida_final)}</td>
+                <td class="${registro.banco_horas > 0 ? 'positive' : registro.banco_horas < 0 ? 'negative' : ''}">
+                    ${registro.banco_horas ? registro.banco_horas.toFixed(2) + 'h' : '--'}
+                </td>
+                <td><span class="status-badge ${status.class}">${status.text}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function formatarData(dataStr) {
+    const data = new Date(dataStr + 'T00:00:00');
+    return data.toLocaleDateString('pt-BR');
+}
+
+function formatarHora(horaStr) {
+    return horaStr ? horaStr.substring(0, 5) : '--:--';
+}
+
+function getStatusDia(registro) {
+    if (registro.entrada && registro.saida_almoco && registro.retorno_almoco && registro.saida_final) {
+        return { text: 'Completo', class: 'complete' };
+    } else if (registro.entrada) {
+        return { text: 'Parcial', class: 'partial' };
+    } else {
+        return { text: 'Ausente', class: 'absent' };
+    }
+}
+
+function calcularEstatisticas(registros) {
+    let diasTrabalhados = 0;
+    let totalBancoHoras = 0;
+    let totalHorasTrabalhadas = 0;
+    
+    registros.forEach(registro => {
+        if (registro.entrada) {
+            diasTrabalhados++;
+        }
+        if (registro.banco_horas !== null) {
+            totalBancoHoras += registro.banco_horas;
+            totalHorasTrabalhadas += 8 + registro.banco_horas; // 8h padrão + banco
+        }
+    });
+    
+    document.getElementById('total-dias').textContent = diasTrabalhados;
+    document.getElementById('total-horas').textContent = totalHorasTrabalhadas.toFixed(1) + 'h';
+    document.getElementById('media-horas').textContent = diasTrabalhados > 0 ? (totalHorasTrabalhadas / diasTrabalhados).toFixed(1) + 'h' : '--';
+    document.getElementById('banco-total').textContent = totalBancoHoras.toFixed(2) + 'h';
+}
+
+function aplicarFiltros() {
+    const dataInicio = document.getElementById('data-inicio').value;
+    const dataFim = document.getElementById('data-fim').value;
+    
+    let registrosFiltrados = registrosCompletos;
+    
+    if (dataInicio) {
+        registrosFiltrados = registrosFiltrados.filter(r => r.data >= dataInicio);
+    }
+    
+    if (dataFim) {
+        registrosFiltrados = registrosFiltrados.filter(r => r.data <= dataFim);
+    }
+    
+    exibirHistorico(registrosFiltrados);
+    calcularEstatisticas(registrosFiltrados);
+    showStatus(`Filtro aplicado: ${registrosFiltrados.length} registros encontrados`, 'info');
+}
+
+function limparFiltros() {
+    document.getElementById('data-inicio').value = '';
+    document.getElementById('data-fim').value = '';
+    exibirHistorico(registrosCompletos);
+    calcularEstatisticas(registrosCompletos);
+    showStatus('Filtros removidos', 'info');
+}
+
+function exportarCSV() {
+    const tbody = document.getElementById('historico-tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    if (rows.length === 0 || rows[0].querySelector('.loading, .no-data')) {
+        showStatus('Nenhum dado para exportar', 'warning');
+        return;
+    }
+    
+    let csv = 'Data,Entrada,Saída Almoço,Retorno Almoço,Saída Final,Banco de Horas,Status\n';
+    
+    rows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td'));
+        const rowData = cells.map(cell => {
+            let text = cell.textContent.trim();
+            // Remove badges e formatação especial
+            if (cell.querySelector('.status-badge')) {
+                text = cell.querySelector('.status-badge').textContent.trim();
+            }
+            return `"${text}"`;
+        }).join(',');
+        csv += rowData + '\n';
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `historico_ponto_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showStatus('Arquivo CSV exportado com sucesso!', 'success');
+}
+
+// Carregar dados ao inicializar
+document.addEventListener('DOMContentLoaded', function() {
+    carregarHistorico();
+    
+    // Definir data padrão (últimos 30 dias)
+    const hoje = new Date();
+    const trintaDiasAtras = new Date(hoje.getTime() - (30 * 24 * 60 * 60 * 1000));
+    
+    document.getElementById('data-fim').value = hoje.toISOString().split('T')[0];
+    document.getElementById('data-inicio').value = trintaDiasAtras.toISOString().split('T')[0];
+});
+{% endblock %}
+

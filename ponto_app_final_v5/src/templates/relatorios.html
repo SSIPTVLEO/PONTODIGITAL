@@ -1,0 +1,638 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios - Ponto App{% endblock %}
+{% block page_title %}Relatórios{% endblock %}
+
+{% block content %}
+<div class="relatorios-container">
+  <!-- Configurações do Relatório -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-cog"></i> Configurações do Relatório</h3>
+    </div>
+    <div class="card-body">
+      <div class="config-grid">
+        <div class="config-item">
+          <label for="periodo-inicio">Período - Início:</label>
+          <input type="date" id="periodo-inicio" class="form-input">
+        </div>
+        <div class="config-item">
+          <label for="periodo-fim">Período - Fim:</label>
+          <input type="date" id="periodo-fim" class="form-input">
+        </div>
+        <div class="config-item">
+          <label for="tipo-relatorio">Tipo de Relatório:</label>
+          <select id="tipo-relatorio" class="form-select">
+            <option value="completo">Relatório Completo</option>
+            <option value="resumo">Resumo Executivo</option>
+            <option value="banco-horas">Banco de Horas</option>
+            <option value="frequencia">Frequência</option>
+          </select>
+        </div>
+        <div class="config-item">
+          <label for="formato-relatorio">Formato:</label>
+          <select id="formato-relatorio" class="form-select">
+            <option value="html">Visualizar na Tela</option>
+            <option value="pdf">PDF</option>
+            <option value="csv">CSV</option>
+            <option value="excel">Excel</option>
+          </select>
+        </div>
+      </div>
+      <div class="config-actions">
+        <button class="btn btn-primary" onclick="gerarRelatorio()">
+          <i class="fas fa-chart-bar"></i> Gerar Relatório
+        </button>
+        <button class="btn btn-secondary" onclick="limparConfiguracoes()">
+          <i class="fas fa-times"></i> Limpar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Relatórios Rápidos -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-bolt"></i> Relatórios Rápidos</h3>
+    </div>
+    <div class="card-body">
+      <div class="quick-reports">
+        <button class="btn btn-outline" onclick="relatorioRapido('hoje')">
+          <i class="fas fa-calendar-day"></i> Hoje
+        </button>
+        <button class="btn btn-outline" onclick="relatorioRapido('semana')">
+          <i class="fas fa-calendar-week"></i> Esta Semana
+        </button>
+        <button class="btn btn-outline" onclick="relatorioRapido('mes')">
+          <i class="fas fa-calendar-alt"></i> Este Mês
+        </button>
+        <button class="btn btn-outline" onclick="relatorioRapido('trimestre')">
+          <i class="fas fa-calendar"></i> Trimestre
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Área de Visualização do Relatório -->
+  <div class="card" id="relatorio-card" style="display: none;">
+    <div class="card-header">
+      <h3><i class="fas fa-file-alt"></i> <span id="relatorio-titulo">Relatório</span></h3>
+      <div class="card-actions">
+        <button class="btn btn-success" onclick="baixarRelatorio()" id="btn-download">
+          <i class="fas fa-download"></i> Baixar
+        </button>
+        <button class="btn btn-secondary" onclick="imprimirRelatorio()">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div id="relatorio-conteudo" class="relatorio-content">
+        <!-- Conteúdo do relatório será inserido aqui -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+let dadosRelatorio = null;
+let configRelatorio = null;
+
+async function gerarRelatorio() {
+    const inicio = document.getElementById('periodo-inicio').value;
+    const fim = document.getElementById('periodo-fim').value;
+    const tipo = document.getElementById('tipo-relatorio').value;
+    const formato = document.getElementById('formato-relatorio').value;
+    
+    if (!inicio || !fim) {
+        showStatus('Por favor, selecione o período do relatório', 'warning');
+        return;
+    }
+    
+    if (new Date(inicio) > new Date(fim)) {
+        showStatus('A data de início deve ser anterior à data de fim', 'error');
+        return;
+    }
+    
+    configRelatorio = { inicio, fim, tipo, formato };
+    
+    try {
+        showStatus('Gerando relatório...', 'info');
+        await carregarDados(inicio, fim);
+        
+        if (formato === 'html') {
+            exibirRelatorioHTML(tipo);
+        } else {
+            await gerarArquivo(tipo, formato);
+        }
+        
+        showStatus('Relatório gerado com sucesso!', 'success');
+    } catch (e) {
+        showStatus('Erro ao gerar relatório', 'error');
+        console.error(e);
+    }
+}
+
+async function carregarDados(inicio, fim) {
+    const token = getToken();
+    if (!token) throw new Error('Token não encontrado');
+    
+    const resp = await fetch('/relatorio', {
+        headers: { 'Authorization': 'Bearer ' + token }
+    });
+    
+    if (!resp.ok) throw new Error('Erro ao carregar dados');
+    
+    const todosRegistros = await resp.json();
+    
+    // Filtrar por período
+    dadosRelatorio = todosRegistros.filter(registro => {
+        return registro.data >= inicio && registro.data <= fim;
+    });
+}
+
+function exibirRelatorioHTML(tipo) {
+    const card = document.getElementById('relatorio-card');
+    const titulo = document.getElementById('relatorio-titulo');
+    const conteudo = document.getElementById('relatorio-conteudo');
+    
+    titulo.textContent = getTituloRelatorio(tipo);
+    
+    switch (tipo) {
+        case 'completo':
+            conteudo.innerHTML = gerarRelatorioCompleto();
+            break;
+        case 'resumo':
+            conteudo.innerHTML = gerarResumoExecutivo();
+            break;
+        case 'banco-horas':
+            conteudo.innerHTML = gerarRelatorioBancoHoras();
+            break;
+        case 'frequencia':
+            conteudo.innerHTML = gerarRelatorioFrequencia();
+            break;
+    }
+    
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth' });
+}
+
+function getTituloRelatorio(tipo) {
+    const titulos = {
+        'completo': 'Relatório Completo de Pontos',
+        'resumo': 'Resumo Executivo',
+        'banco-horas': 'Relatório de Banco de Horas',
+        'frequencia': 'Relatório de Frequência'
+    };
+    return titulos[tipo] || 'Relatório';
+}
+
+function gerarRelatorioCompleto() {
+    const stats = calcularEstatisticas();
+    
+    return `
+        <div class="relatorio-header">
+            <h4>Período: ${formatarData(configRelatorio.inicio)} a ${formatarData(configRelatorio.fim)}</h4>
+            <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+        </div>
+        
+        <div class="relatorio-stats">
+            <div class="stat-card">
+                <div class="stat-number">${stats.diasTrabalhados}</div>
+                <div class="stat-label">Dias Trabalhados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${stats.totalHoras.toFixed(1)}h</div>
+                <div class="stat-label">Total de Horas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${stats.bancoHoras.toFixed(2)}h</div>
+                <div class="stat-label">Banco de Horas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${stats.mediaHoras.toFixed(1)}h</div>
+                <div class="stat-label">Média Diária</div>
+            </div>
+        </div>
+        
+        <div class="relatorio-table">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Entrada</th>
+                        <th>Saída Almoço</th>
+                        <th>Retorno Almoço</th>
+                        <th>Saída Final</th>
+                        <th>Banco de Horas</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${dadosRelatorio.map(registro => `
+                        <tr>
+                            <td>${formatarData(registro.data)}</td>
+                            <td>${formatarHora(registro.entrada)}</td>
+                            <td>${formatarHora(registro.saida_almoco)}</td>
+                            <td>${formatarHora(registro.retorno_almoco)}</td>
+                            <td>${formatarHora(registro.saida_final)}</td>
+                            <td class="${registro.banco_horas > 0 ? 'positive' : registro.banco_horas < 0 ? 'negative' : ''}">
+                                ${registro.banco_horas ? registro.banco_horas.toFixed(2) + 'h' : '--'}
+                            </td>
+                            <td>${getStatusTexto(registro)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function gerarResumoExecutivo() {
+    const stats = calcularEstatisticas();
+    const diasUteis = calcularDiasUteis();
+    
+    return `
+        <div class="relatorio-header">
+            <h4>Resumo Executivo - ${formatarData(configRelatorio.inicio)} a ${formatarData(configRelatorio.fim)}</h4>
+            <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+        </div>
+        
+        <div class="resumo-executivo">
+            <div class="resumo-section">
+                <h5>Frequência</h5>
+                <p><strong>Dias trabalhados:</strong> ${stats.diasTrabalhados} de ${diasUteis} dias úteis</p>
+                <p><strong>Taxa de presença:</strong> ${((stats.diasTrabalhados / diasUteis) * 100).toFixed(1)}%</p>
+            </div>
+            
+            <div class="resumo-section">
+                <h5>Horas Trabalhadas</h5>
+                <p><strong>Total de horas:</strong> ${stats.totalHoras.toFixed(1)}h</p>
+                <p><strong>Média diária:</strong> ${stats.mediaHoras.toFixed(1)}h</p>
+                <p><strong>Horas esperadas:</strong> ${(diasUteis * 8).toFixed(1)}h</p>
+            </div>
+            
+            <div class="resumo-section">
+                <h5>Banco de Horas</h5>
+                <p><strong>Saldo atual:</strong> ${stats.bancoHoras.toFixed(2)}h</p>
+                <p><strong>Status:</strong> ${stats.bancoHoras > 0 ? 'Crédito' : stats.bancoHoras < 0 ? 'Débito' : 'Neutro'}</p>
+            </div>
+            
+            <div class="resumo-section">
+                <h5>Observações</h5>
+                <ul>
+                    ${stats.diasIncompletos > 0 ? `<li>${stats.diasIncompletos} dias com registros incompletos</li>` : ''}
+                    ${stats.bancoHoras > 10 ? '<li>Banco de horas acima de 10h - considere compensação</li>' : ''}
+                    ${stats.bancoHoras < -10 ? '<li>Débito de horas acima de 10h - atenção necessária</li>' : ''}
+                </ul>
+            </div>
+        </div>
+    `;
+}
+
+function gerarRelatorioBancoHoras() {
+    const registrosComBanco = dadosRelatorio.filter(r => r.banco_horas !== null);
+    
+    return `
+        <div class="relatorio-header">
+            <h4>Relatório de Banco de Horas - ${formatarData(configRelatorio.inicio)} a ${formatarData(configRelatorio.fim)}</h4>
+            <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+        </div>
+        
+        <div class="banco-horas-chart">
+            <canvas id="bancoHorasChart" width="400" height="200"></canvas>
+        </div>
+        
+        <div class="relatorio-table">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Horas Trabalhadas</th>
+                        <th>Banco do Dia</th>
+                        <th>Saldo Acumulado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${registrosComBanco.map((registro, index) => {
+                        const saldoAcumulado = registrosComBanco.slice(0, index + 1)
+                            .reduce((acc, r) => acc + r.banco_horas, 0);
+                        const horasTrabalhadas = 8 + registro.banco_horas;
+                        
+                        return `
+                            <tr>
+                                <td>${formatarData(registro.data)}</td>
+                                <td>${horasTrabalhadas.toFixed(2)}h</td>
+                                <td class="${registro.banco_horas > 0 ? 'positive' : registro.banco_horas < 0 ? 'negative' : ''}">
+                                    ${registro.banco_horas.toFixed(2)}h
+                                </td>
+                                <td class="${saldoAcumulado > 0 ? 'positive' : saldoAcumulado < 0 ? 'negative' : ''}">
+                                    ${saldoAcumulado.toFixed(2)}h
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function gerarRelatorioFrequencia() {
+    const stats = calcularEstatisticas();
+    const diasUteis = calcularDiasUteis();
+    
+    return `
+        <div class="relatorio-header">
+            <h4>Relatório de Frequência - ${formatarData(configRelatorio.inicio)} a ${formatarData(configRelatorio.fim)}</h4>
+            <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+        </div>
+        
+        <div class="frequencia-stats">
+            <div class="freq-card complete">
+                <div class="freq-number">${stats.diasCompletos}</div>
+                <div class="freq-label">Dias Completos</div>
+            </div>
+            <div class="freq-card partial">
+                <div class="freq-number">${stats.diasIncompletos}</div>
+                <div class="freq-label">Dias Incompletos</div>
+            </div>
+            <div class="freq-card absent">
+                <div class="freq-number">${diasUteis - stats.diasTrabalhados}</div>
+                <div class="freq-label">Ausências</div>
+            </div>
+            <div class="freq-card total">
+                <div class="freq-number">${((stats.diasTrabalhados / diasUteis) * 100).toFixed(1)}%</div>
+                <div class="freq-label">Taxa de Presença</div>
+            </div>
+        </div>
+        
+        <div class="relatorio-table">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Dia da Semana</th>
+                        <th>Status</th>
+                        <th>Entrada</th>
+                        <th>Saída Final</th>
+                        <th>Observações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${dadosRelatorio.map(registro => {
+                        const data = new Date(registro.data + 'T00:00:00');
+                        const diaSemana = data.toLocaleDateString('pt-BR', { weekday: 'long' });
+                        const status = getStatusCompleto(registro);
+                        
+                        return `
+                            <tr>
+                                <td>${formatarData(registro.data)}</td>
+                                <td>${diaSemana}</td>
+                                <td><span class="status-badge ${status.class}">${status.text}</span></td>
+                                <td>${formatarHora(registro.entrada)}</td>
+                                <td>${formatarHora(registro.saida_final)}</td>
+                                <td>${status.observacao}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function calcularEstatisticas() {
+    let diasTrabalhados = 0;
+    let diasCompletos = 0;
+    let diasIncompletos = 0;
+    let totalBancoHoras = 0;
+    let totalHorasTrabalhadas = 0;
+    
+    dadosRelatorio.forEach(registro => {
+        if (registro.entrada) {
+            diasTrabalhados++;
+            
+            if (registro.entrada && registro.saida_almoco && registro.retorno_almoco && registro.saida_final) {
+                diasCompletos++;
+            } else {
+                diasIncompletos++;
+            }
+        }
+        
+        if (registro.banco_horas !== null) {
+            totalBancoHoras += registro.banco_horas;
+            totalHorasTrabalhadas += 8 + registro.banco_horas;
+        }
+    });
+    
+    return {
+        diasTrabalhados,
+        diasCompletos,
+        diasIncompletos,
+        bancoHoras: totalBancoHoras,
+        totalHoras: totalHorasTrabalhadas,
+        mediaHoras: diasTrabalhados > 0 ? totalHorasTrabalhadas / diasTrabalhados : 0
+    };
+}
+
+function calcularDiasUteis() {
+    const inicio = new Date(configRelatorio.inicio + 'T00:00:00');
+    const fim = new Date(configRelatorio.fim + 'T00:00:00');
+    let diasUteis = 0;
+    
+    for (let d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
+        const diaSemana = d.getDay();
+        if (diaSemana !== 0 && diaSemana !== 6) { // Não é domingo nem sábado
+            diasUteis++;
+        }
+    }
+    
+    return diasUteis;
+}
+
+function formatarData(dataStr) {
+    const data = new Date(dataStr + 'T00:00:00');
+    return data.toLocaleDateString('pt-BR');
+}
+
+function formatarHora(horaStr) {
+    return horaStr ? horaStr.substring(0, 5) : '--:--';
+}
+
+function getStatusTexto(registro) {
+    if (registro.entrada && registro.saida_almoco && registro.retorno_almoco && registro.saida_final) {
+        return 'Completo';
+    } else if (registro.entrada) {
+        return 'Parcial';
+    } else {
+        return 'Ausente';
+    }
+}
+
+function getStatusCompleto(registro) {
+    if (registro.entrada && registro.saida_almoco && registro.retorno_almoco && registro.saida_final) {
+        return { 
+            text: 'Completo', 
+            class: 'complete',
+            observacao: 'Todos os pontos registrados'
+        };
+    } else if (registro.entrada) {
+        const faltando = [];
+        if (!registro.saida_almoco) faltando.push('saída almoço');
+        if (!registro.retorno_almoco) faltando.push('retorno almoço');
+        if (!registro.saida_final) faltando.push('saída final');
+        
+        return { 
+            text: 'Parcial', 
+            class: 'partial',
+            observacao: `Faltando: ${faltando.join(', ')}`
+        };
+    } else {
+        return { 
+            text: 'Ausente', 
+            class: 'absent',
+            observacao: 'Nenhum ponto registrado'
+        };
+    }
+}
+
+async function gerarArquivo(tipo, formato) {
+    // Implementar geração de arquivos PDF, CSV, Excel
+    showStatus(`Geração de arquivo ${formato.toUpperCase()} em desenvolvimento`, 'info');
+}
+
+function relatorioRapido(periodo) {
+    const hoje = new Date();
+    let inicio, fim;
+    
+    switch (periodo) {
+        case 'hoje':
+            inicio = fim = hoje.toISOString().split('T')[0];
+            break;
+        case 'semana':
+            const inicioSemana = new Date(hoje);
+            inicioSemana.setDate(hoje.getDate() - hoje.getDay());
+            inicio = inicioSemana.toISOString().split('T')[0];
+            fim = hoje.toISOString().split('T')[0];
+            break;
+        case 'mes':
+            inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+            fim = hoje.toISOString().split('T')[0];
+            break;
+        case 'trimestre':
+            const mesAtual = hoje.getMonth();
+            const inicioTrimestre = Math.floor(mesAtual / 3) * 3;
+            inicio = new Date(hoje.getFullYear(), inicioTrimestre, 1).toISOString().split('T')[0];
+            fim = hoje.toISOString().split('T')[0];
+            break;
+    }
+    
+    document.getElementById('periodo-inicio').value = inicio;
+    document.getElementById('periodo-fim').value = fim;
+    document.getElementById('tipo-relatorio').value = 'completo';
+    document.getElementById('formato-relatorio').value = 'html';
+    
+    gerarRelatorio();
+}
+
+function limparConfiguracoes() {
+    document.getElementById('periodo-inicio').value = '';
+    document.getElementById('periodo-fim').value = '';
+    document.getElementById('tipo-relatorio').value = 'completo';
+    document.getElementById('formato-relatorio').value = 'html';
+    document.getElementById('relatorio-card').style.display = 'none';
+}
+
+function baixarRelatorio() {
+    if (!dadosRelatorio || !configRelatorio) {
+        showStatus('Nenhum relatório gerado para download', 'warning');
+        return;
+    }
+    
+    const formato = configRelatorio.formato;
+    if (formato === 'html') {
+        // Baixar como HTML
+        const conteudo = document.getElementById('relatorio-conteudo').innerHTML;
+        const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Relatório - Ponto App</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    .data-table { width: 100%; border-collapse: collapse; }
+                    .data-table th, .data-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    .data-table th { background-color: #f2f2f2; }
+                    .positive { color: green; }
+                    .negative { color: red; }
+                </style>
+            </head>
+            <body>
+                ${conteudo}
+            </body>
+            </html>
+        `;
+        
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `relatorio_${configRelatorio.tipo}_${configRelatorio.inicio}_${configRelatorio.fim}.html`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showStatus('Relatório HTML baixado com sucesso!', 'success');
+    } else {
+        showStatus(`Download em formato ${formato.toUpperCase()} em desenvolvimento`, 'info');
+    }
+}
+
+function imprimirRelatorio() {
+    const conteudo = document.getElementById('relatorio-conteudo');
+    if (!conteudo) {
+        showStatus('Nenhum relatório para imprimir', 'warning');
+        return;
+    }
+    
+    const janelaImpressao = window.open('', '_blank');
+    janelaImpressao.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Relatório - Ponto App</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .data-table { width: 100%; border-collapse: collapse; }
+                .data-table th, .data-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                .data-table th { background-color: #f2f2f2; }
+                .positive { color: green; }
+                .negative { color: red; }
+                @media print {
+                    body { margin: 0; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            ${conteudo.innerHTML}
+        </body>
+        </html>
+    `);
+    janelaImpressao.document.close();
+    janelaImpressao.print();
+}
+
+// Inicializar com período padrão
+document.addEventListener('DOMContentLoaded', function() {
+    const hoje = new Date();
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    
+    document.getElementById('periodo-inicio').value = inicioMes.toISOString().split('T')[0];
+    document.getElementById('periodo-fim').value = hoje.toISOString().split('T')[0];
+});
+{% endblock %}
+
